@@ -1,30 +1,32 @@
-# Claude Token Efficiency Evaluator 🚀
+# Claude Token Efficiency Evaluator
 
-A small Julia tool that uses Anthropic's Claude API to analyze a natural language
-prompt for **token efficiency**: it counts the prompt's exact token usage, has
-Claude flag redundant phrasing and propose a tighter rewrite, and reports the
-token and cost savings. It can also compare a prompt's token cost across models.
+A Julia command-line tool that uses Anthropic's Claude API to analyze a natural
+language prompt for token efficiency. It counts the prompt's exact token usage,
+has the model flag redundant phrasing and propose a more concise rewrite, and
+reports the resulting token and cost savings. It can also compare a prompt's
+token cost across models.
 
----
-
-## 🎯 How It Works
+## Overview
 
 Given a prompt, the tool:
 
 - Counts the prompt's exact tokens via the Anthropic `count_tokens` endpoint.
-- Asks Claude to identify redundant / filler phrasing and rewrite the prompt more
-  concisely while preserving intent and constraints (returned as structured JSON).
+- Asks the model to identify redundant or filler phrasing and rewrite the prompt
+  more concisely while preserving its intent and constraints. The response is
+  returned as structured JSON.
 - Counts the tokens of the improved prompt.
 - Estimates the token and input-cost savings and prints a formatted report.
 
-With `--compare`, it instead counts the prompt across several models and prints a
-cost table so you can pick the cheapest model for that input.
+In comparison mode (`--compare`), it counts the prompt across several models and
+prints a cost table, making it easy to identify the most economical model for a
+given input.
 
----
+## Requirements
 
-## ⚙️ Setup
+- [Julia](https://julialang.org/) 1.6 or later
+- An Anthropic API key
 
-Requires [Julia](https://julialang.org/) 1.6+.
+## Setup
 
 1. Clone the repository:
 
@@ -39,22 +41,21 @@ Requires [Julia](https://julialang.org/) 1.6+.
    julia --project=. -e 'using Pkg; Pkg.instantiate()'
    ```
 
-3. Provide your Anthropic API key. Either export it:
+3. Provide your Anthropic API key. Either export it as an environment variable:
 
    ```bash
    export ANTHROPIC_API_KEY="sk-ant-..."
    ```
 
-   or copy `secrets.jl.example` to `secrets.jl` (git-ignored) and fill in your key:
+   or copy `secrets.jl.example` to `secrets.jl` (which is git-ignored) and set the
+   key there:
 
    ```bash
    cp secrets.jl.example secrets.jl
    # then edit secrets.jl
    ```
 
----
-
-## ▶️ Usage
+## Usage
 
 ```
 julia main.jl [options] "Your prompt here"
@@ -98,7 +99,7 @@ Improved prompt:
 Summarize the following article.
 ```
 
-### Pick a model
+### Select a model
 
 ```bash
 julia --project=. main.jl -m claude-haiku-4-5 "Translate to French: hello"
@@ -121,15 +122,14 @@ claude-opus-4-8           11      5.5e-5         0.055
 
 ### Machine-readable output
 
-Add `--json` to any command to print the raw result as JSON (for piping/scripting):
+Add `--json` to any command to print the raw result as JSON, suitable for piping
+into other tools:
 
 ```bash
 julia --project=. main.jl --json "Summarize this." | jq .improved_prompt
 ```
 
----
-
-## 🧩 Using it as a library
+## Library API
 
 The functions in `main.jl` can be called directly:
 
@@ -140,7 +140,7 @@ include("main.jl")
 run_token_efficiency_tool("Your prompt here")
 run_token_efficiency_tool("Your prompt"; model = "claude-sonnet-5")
 
-# Just the data, no printing (resolves the key from the environment):
+# Data only, no printing (resolves the key from the environment):
 result = evaluate_prompt("Your prompt here")
 print_report(result)
 
@@ -149,27 +149,26 @@ rows = compare_models("Your prompt here")
 print_comparison(rows)
 ```
 
----
+## Tests
 
-## 🧪 Tests
-
-Offline unit tests (no API calls) cover the cost math, CLI parser, and schema:
+Offline unit tests (no API calls) cover the cost math, the command-line parser,
+and the schema:
 
 ```bash
 julia --project=. test/runtests.jl
 ```
 
-Opt-in live tests actually call the API — enable them with an env var and a key:
+Opt-in live tests call the API directly. Enable them with an environment variable
+and a valid key:
 
 ```bash
 RUN_LIVE_TESTS=1 ANTHROPIC_API_KEY="sk-ant-..." julia --project=. test/runtests.jl
 ```
 
----
+## Notes
 
-## 🔐 Notes
-
-- Your API key is never committed — `secrets.jl` is listed in `.gitignore`.
-- Token counts are model-specific; the same text tokenizes differently per model.
+- The API key is never committed. `secrets.jl` is listed in `.gitignore`.
+- Token counts are model-specific; the same text tokenizes differently on
+  different models.
 - Cost estimates use published per-million input-token prices and cover the input
-  side only (the analysis call itself also incurs a small one-time cost).
+  side only. The analysis request itself also incurs a small, one-time cost.
